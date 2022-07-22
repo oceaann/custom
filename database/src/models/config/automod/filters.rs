@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
-pub enum Filters {
+pub enum Filter {
     MessageLength(MessageLength),
     Attachments(Attachments),
     Stickers

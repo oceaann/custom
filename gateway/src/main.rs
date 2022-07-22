@@ -8,8 +8,8 @@ use crate::events::on_event;
 use database::mongodb::MongoDBConnection;
 use database::redis::RedisConnection;
 use dotenv::dotenv;
-use futures_util::StreamExt;
 use database::clients::{Client, DiscordClients, LoadDiscordClients};
+use futures_util::StreamExt;
 use twilight_gateway::Shard;
 use twilight_model::gateway::Intents;
 use crate::bucket::Bucket;
@@ -25,8 +25,7 @@ async fn create_shard(
 
     let intents = Intents::MESSAGE_CONTENT | Intents::GUILD_MESSAGES | Intents::GUILDS | Intents::GUILD_BANS | Intents::GUILD_MEMBERS;
 
-    let (shard, mut events) = Shard::new(value.token.to_owned(), intents)
-        .await.unwrap();
+    let (shard, mut events) = Shard::new(value.token.to_owned(), intents).await.unwrap();
     shard.start().await.expect("Failed to start shard");
     println!("Created shard for {}", id);
 

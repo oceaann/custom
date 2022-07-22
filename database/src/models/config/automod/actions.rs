@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type", content = "key")]
-pub enum Actions {
+pub enum Action {
     DirectMessage,
     IncreaseBucket(String),
     DeleteMessage,
@@ -14,5 +14,6 @@ pub enum Actions {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Timeout {
+    /// Duration in secs
     pub duration: i64
 }

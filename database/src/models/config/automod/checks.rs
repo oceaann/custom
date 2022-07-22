@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
-pub enum Checks {
+pub enum Check {
     FlaggedScamLink,
     TextLines(TextLines),
     CapsLock(CapsLock),

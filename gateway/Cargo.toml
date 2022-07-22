@@ -6,14 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-twilight-gateway = { git = "https://github.com/twilight-rs/twilight" }
-twilight-model = { git = "https://github.com/twilight-rs/twilight" }
-twilight-http = { git = "https://github.com/twilight-rs/twilight" }
+twilight-gateway = "0.11"
+twilight-model = "0.11"
+twilight-http = "0.11"
 tokio = "1.16.1"
 dotenv = "0.15.0"
 database = { path = "../database" }
 futures-util = "0.3.19"
-twilight-util = { git = "https://github.com/twilight-rs/twilight", features = ["full"] }
+twilight-util = { version = "0.11", features = ["full"] }
 chrono = "0.4.19"
 mongodb = "2.1.0"
 reqwest = "0.11.9"

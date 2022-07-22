@@ -1,19 +1,18 @@
-use database::models::config::automod::checks::{CapsLock, Checks, Invites, Regex, TextLines};
+use database::models::config::automod::checks::{CapsLock, Check, Invites, Regex, TextLines};
 use utils::ok_or_skip_without_clone;
 use crate::ScamLinks;
 
-pub async fn checks_match(check: Checks, message_content: String, scam_domains: ScamLinks) -> Result<bool, ()> {
+pub async fn checks_match(check: &Check, message_content: &str, scam_domains: &ScamLinks) -> Result<bool, ()> {
     match check {
-        Checks::FlaggedScamLink => flagged_scam_link(message_content, scam_domains).await,
-        Checks::TextLines(config) => Ok(text_lines(config, message_content)),
-        Checks::CapsLock(config) => Ok(caps_lock(config, message_content)),
-        Checks::Invites(config) => invites(config, message_content),
-        Checks::Regex(config) => regex(config, message_content)
+        Check::FlaggedScamLink => flagged_scam_link(message_content, scam_domains).await,
+        Check::TextLines(config) => Ok(text_lines(config, message_content)),
+        Check::CapsLock(config) => Ok(caps_lock(config, message_content)),
+        Check::Invites(config) => invites(config, message_content),
+        Check::Regex(config) => regex(config, message_content)
     }
 }
 
-async fn flagged_scam_link(message_content: String, scam_domains: ScamLinks) -> Result<bool, ()> {
-
+async fn flagged_scam_link(message_content: &str, scam_domains: &ScamLinks) -> Result<bool, ()> {
     let domains = regex::Regex::new(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]").map_err(|_| ())?;
 
     let message_content = message_content.to_lowercase();
@@ -21,39 +20,33 @@ async fn flagged_scam_link(message_content: String, scam_domains: ScamLinks) -> 
     let domains = domains.find_iter(message_content.as_str());
     let domains = domains.map(|domain| domain.as_str().to_string()).collect();
     Ok(scam_domains.contains(domains).await)
-
 }
 
-fn text_lines(config: TextLines, message_content: String) -> bool {
-
+fn text_lines(config: &TextLines, message_content: &str) -> bool {
     let enters = message_content.lines().count();
     let line_len = if let Some(len) = config.line_len { len as usize } else { 120 };
     let split = message_content.len() / line_len;
     let lines = enters + split;
 
-    (if let Some(min) = config.min {
-        lines > (min as usize)
-    } else { true }) && (if let Some(max) = config.max {
-        lines < (max as usize)
-    } else { true })
-
+    min_max_checks(
+        config.min.map(usize::from),
+        config.max.map(usize::from),
+        lines
+    )
 }
 
-fn caps_lock(config: CapsLock, message_content: String) -> bool {
-
+fn caps_lock(config: &CapsLock, message_content: &str) -> bool {
     let uppercase = message_content.chars().filter(|c| c.is_uppercase()).count();
     let uppercase_part = uppercase * 100 / message_content.len();
 
-    (if let Some(min) = config.min {
-        uppercase_part > (min as usize)
-    } else { true }) && (if let Some(max) = config.max {
-        uppercase_part < (max as usize)
-    } else { true })
-
+    min_max_checks(
+        config.min.map(usize::from),
+        config.max.map(usize::from),
+        uppercase_part
+    )
 }
 
-fn invites(config: Invites, message_content: String) -> Result<bool, ()> {
-
+fn invites(config: &Invites, message_content: &str) -> Result<bool, ()> {
     let invites = regex::Regex::new(r"(?i)(discord.gg|discordapp.com/invite|discord.com/invite)(?:/#)?/([a-zA-Z0-9-]+)").map_err(|_| ())?;
 
     let message_content = message_content.to_lowercase();
@@ -67,16 +60,22 @@ fn invites(config: Invites, message_content: String) -> Result<bool, ()> {
             break;
         }
     }
-    Ok(contains)
 
+    Ok(contains)
 }
 
-fn regex(config: Regex, message_content: String) -> Result<bool, ()> {
-
-    let regex = regex::Regex::new(&config.regex).map_err(|_| ())?;
-    let is_matching = regex.is_match(message_content.as_str());
+fn regex(config: &Regex, message_content: &str) -> Result<bool, ()> {
+    let regex = regex::Regex::new(&*config.regex).map_err(|_| ())?;
+    let is_matching = regex.is_match(message_content);
     Ok((is_matching && config.is_matching) || (!is_matching && !config.is_matching))
+}
 
+fn min_max_checks(min: Option<usize>, max: Option<usize>, count: usize) -> bool {
+    (if let Some(min) = min {
+        count > min
+    } else { true }) && (if let Some(max) = max {
+        count < max
+    } else { true })
 }
 
 #[cfg(test)]
@@ -90,28 +89,28 @@ mod tests {
     fn test_invites() {
         assert_eq!(
             invites(
-                Invites { allowed_invites: vec![] },
-                "discord.gg/discord-developers".to_string()
+                &Invites { allowed_invites: vec![] },
+                &"discord.gg/discord-developers".to_string()
             ).unwrap(),
             true
         );
         assert_eq!(
             invites(
-                Invites { allowed_invites: vec![] },
-                "discord.com/invite/discord-developers".to_string()
+                &Invites { allowed_invites: vec![] },
+                &"discord.com/invite/discord-developers".to_string()
             ).unwrap(),
             true
         );
         assert_eq!(
             invites(
-                Invites { allowed_invites: vec!["discord-developers".to_string()] },
-                "discord.gg/discord-developers".to_string()
+                &Invites { allowed_invites: vec!["discord-developers".to_string()] },
+                &"discord.gg/discord-developers".to_string()
             ).unwrap(),
             false
         );
         assert_eq!(
             invites(
-                Invites { allowed_invites: vec![] }, "".to_string()
+                &Invites { allowed_invites: vec![] }, &"".to_string()
             ).unwrap(),
             false
         );
@@ -120,15 +119,15 @@ mod tests {
     #[test]
     fn test_caps_lock() {
         assert_eq!(
-            caps_lock(CapsLock { min: None, max: None }, "ASDH".to_string()),
+            caps_lock(&CapsLock { min: None, max: None }, &"ASDH".to_string()),
             true
         );
         assert_eq!(
-            caps_lock(CapsLock { min: Some(2), max: Some(100) }, "ADAsi".to_string()),
+            caps_lock(&CapsLock { min: Some(2), max: Some(100) }, &"ADAsi".to_string()),
             true
         );
         assert_eq!(
-            caps_lock(CapsLock { min: Some(2), max: Some(10) }, "A".to_string()),
+            caps_lock(&CapsLock { min: Some(2), max: Some(10) }, &"A".to_string()),
             false
         );
     }
@@ -137,22 +136,22 @@ mod tests {
     fn test_regexp_matching() {
         assert_eq!(
             regex(
-                Regex { is_matching: true, regex: "ok".to_string() },
-                "ok".to_string()
+                &Regex { is_matching: true, regex: "ok".to_string() },
+                &"ok".to_string()
             ).unwrap(),
             true
         );
         assert_eq!(
             regex(
-                Regex { is_matching: false, regex: "ok".to_string() },
-                "ok".to_string()
+                &Regex { is_matching: false, regex: "ok".to_string() },
+                &"ok".to_string()
             ).unwrap(),
             false
         );
         assert_eq!(
             regex(
-                Regex { is_matching: true, regex: "no".to_string() },
-                "ok".to_string()
+                &Regex { is_matching: true, regex: "no".to_string() },
+                &"ok".to_string()
             ).unwrap(),
             false
         );
@@ -162,22 +161,22 @@ mod tests {
     fn test_text_lines() {
         assert_eq!(
             text_lines(
-                TextLines { line_len: Some(80), min: None, max: None },
-                "\n\n\n".to_string()
+                &TextLines { line_len: Some(80), min: None, max: None },
+                &"\n\n\n".to_string()
             ),
             true
         );
         assert_eq!(
             text_lines(
-                TextLines { line_len: Some(80), min: Some(1), max: Some(2) },
-                "\n\n\n".to_string()
+                &TextLines { line_len: Some(80), min: Some(1), max: Some(2) },
+                &"\n\n\n".to_string()
             ),
             false
         );
         assert_eq!(
             text_lines(
-                TextLines { line_len: Some(80), min: Some(1), max: None },
-                "".to_string()
+                &TextLines { line_len: Some(80), min: Some(1), max: None },
+                &"".to_string()
             ),
             false
         )
