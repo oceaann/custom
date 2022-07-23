@@ -25,8 +25,7 @@ async fn create_shard(
 
     let intents = Intents::MESSAGE_CONTENT | Intents::GUILD_MESSAGES | Intents::GUILDS | Intents::GUILD_BANS | Intents::GUILD_MEMBERS;
 
-    let (shard, mut events) = Shard::new(value.token.to_owned(), intents)
-        .await.unwrap();
+    let (shard, mut events) = Shard::new(value.token.to_owned(), intents);
     shard.start().await.expect("Failed to start shard");
     println!("Created shard for {}", id);
 

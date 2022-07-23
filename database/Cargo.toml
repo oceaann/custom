@@ -7,10 +7,10 @@ edition = "2021"
 
 [dependencies]
 tokio = "1.15.0"
-twilight-model = { git = "https://github.com/twilight-rs/twilight" }
+twilight-model = "0.12"
 serde = "1.0.134"
 redis = "0.21.5"
-twilight-http = { git = "https://github.com/twilight-rs/twilight" }
+twilight-http = "0.12"
 humantime = "2.1.0"
 utils = { path = "../utils" }
 dashmap = "5.2.0"
